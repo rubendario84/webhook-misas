@@ -6,7 +6,7 @@ app.use(express.json());
 
 // Credenciales fijas para evitar fallos de lectura en variables de entorno
 const SUPABASE_URL = process.env.SUPABASE_URL || 'https://lbkrwlzxlfwwcjwyhten.supabase.co';
-const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY || 'TU_ANON_KEY_AQUI';
+const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imxia3J3bHp4bGZ3d2Nqd3lodGVuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY2MzE5MTAsImV4cCI6MjEwMjIwNzkxMH0.toQCx9yoL9pqi6vrjuuuIYFgBl5KRtlllorWlVA8LU4';
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
