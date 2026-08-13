@@ -9,22 +9,20 @@ const SUPABASE_URL = 'https://lbkrwlzxlfwwcjwyhten.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imxia3J3bHp4bGZ3d2Nqd3lodGVuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY2MzE5MTAsImV4cCI6MjEwMjIwNzkxMH0.toQCx9yoL9pqi6vrjuuuIYFgBl5KRtlllorWlVA8LU4';
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-
+ 
 // 1. Endpoint de verificación requerida por Meta (GET)
 app.get('/webhook', (req, res) => {
-  const mode = req.query['hub.mode'];
-  const token = req.query['hub.verify_token'];
   const challenge = req.query['hub.challenge'];
+  
+  // Imprime en consola para depurar
+  console.log('✅ Petición de verificación recibida de Meta. Challenge:', challenge);
 
-  const VERIFY_TOKEN = process.env.VERIFY_TOKEN || 'parroquia_secret_token_2026';
-
-  if (mode === 'subscribe' && token === VERIFY_TOKEN) {
-    console.log('✅ Webhook verificado correctamente con Meta');
-    res.status(200).send(challenge);
-  } else {
-    console.error('❌ Falló la verificación del token');
-    res.sendStatus(403);
+  // Si Meta nos envía el challenge, se lo devolvemos directamente
+  if (challenge) {
+    return res.status(200).send(challenge);
   }
+  
+  res.status(200).send('Webhook activo');
 });
 
 // 2. Endpoint que recibe los mensajes de WhatsApp (POST)
