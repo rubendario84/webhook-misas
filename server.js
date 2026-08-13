@@ -5,8 +5,10 @@ const app = express();
 app.use(express.json());
 
 // Conexión a Supabase usando variables de entorno
-const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_ANON_KEY);
-
+const supabase = createClient(
+  process.env.SUPABASE_URL || 'https://lbkrwlzxlfwwcjwyhten.supabase.co',
+  process.env.SUPABASE_ANON_KEY
+);
 // 1. Endpoint de verificación requerida por Meta (GET)
 app.get('/webhook', (req, res) => {
   const mode = req.query['hub.mode'];
