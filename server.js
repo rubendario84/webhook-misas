@@ -4,18 +4,21 @@ const { createClient } = require('@supabase/supabase-js');
 const app = express();
 app.use(express.json());
 
-// Conexión a Supabase usando variables de entorno
-const supabase = createClient(
-  process.env.SUPABASE_URL || 'https://lbkrwlzxlfwwcjwyhten.supabase.co',
-  process.env.SUPABASE_ANON_KEY
-);
+// Credenciales fijas para evitar fallos de lectura en variables de entorno
+const SUPABASE_URL = process.env.SUPABASE_URL || 'https://lbkrwlzxlfwwcjwyhten.supabase.co';
+const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY || 'TU_ANON_KEY_AQUI';
+
+const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
 // 1. Endpoint de verificación requerida por Meta (GET)
 app.get('/webhook', (req, res) => {
   const mode = req.query['hub.mode'];
   const token = req.query['hub.verify_token'];
   const challenge = req.query['hub.challenge'];
 
-  if (mode === 'subscribe' && token === process.env.VERIFY_TOKEN) {
+  const VERIFY_TOKEN = process.env.VERIFY_TOKEN || 'parroquia_secret_token_2026';
+
+  if (mode === 'subscribe' && token === VERIFY_TOKEN) {
     console.log('✅ Webhook verificado correctamente con Meta');
     res.status(200).send(challenge);
   } else {
@@ -32,7 +35,7 @@ app.post('/webhook', async (req, res) => {
     const value = changes?.value;
     const message = value?.messages?.[0];
 
-    // Responder inmediatamente 200 OK a Meta
+    // Responder 200 OK de inmediato a Meta
     res.status(200).send('EVENT_RECEIVED');
 
     if (!message) return;
@@ -41,7 +44,7 @@ app.post('/webhook', async (req, res) => {
       const textoMensaje = message.text.body;
       console.log(`💬 Mensaje recibido: "${textoMensaje}"`);
 
-      // Buscar la misa activa en Supabase
+      // Obtener la misa activa
       const { data: misas, error: errorMisa } = await supabase
         .from('misas_instancia')
         .select('id_misa')
@@ -56,7 +59,7 @@ app.post('/webhook', async (req, res) => {
 
       const idMisaActiva = misas[0].id_misa;
 
-      // Guardar la intención en Supabase
+      // Guardar la intención
       const { error: errorInsert } = await supabase
         .from('intenciones')
         .insert([
