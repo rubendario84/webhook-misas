@@ -7,7 +7,7 @@ app.use(express.json());
 // 1. Configuración de Supabase
 // ⚠️ REEMPLAZA 'TU_ANON_KEY_AQUI' POR TU CLAVE REAL DE SUPABASE
 const SUPABASE_URL = 'https://lbkrwlzxlfwwcjwyhten.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imxia3J3bHp4bGZ3d2Nqd3lodGVuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY2MzE5MTAsImV4cCI6MjEwMjIwNzkxMH0.toQCx9yoL9pqi6vrjuuuIYFgBl5KRtlllorWlVA8LU4';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imxia3J3bHp4bGZ3d2Nqd3lodGVuIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4NjYzMTkxMCwiZXhwIjoyMTAyMjA3OTEwfQ.Po3AEEO_EPA2KpiXv7FYazhLyeDVPIH9kXko64accZ0';
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
