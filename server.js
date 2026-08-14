@@ -1,8 +1,12 @@
 const express = require('express');
+const cors = require('cors'); // Requerido para permitir peticiones desde clientes HTTP web como Hoppscotch/Postman
 const { createClient } = require('@supabase/supabase-js');
 const { evaluateIntent } = require('./services/intentService.js');
 
 const app = express();
+
+// Middleware
+app.use(cors()); // Habilita CORS para peticiones desde navegadores/plataformas externas
 app.use(express.json());
 
 // 1. Configuración de Supabase
@@ -40,9 +44,9 @@ app.post('/webhook', async (req, res) => {
   try {
     const body = req.body;
 
-    // 1. Validar que la estructura sea de un objeto de WhatsApp
+    // Validar que la estructura sea de un objeto de Meta/WhatsApp
     if (body.object) {
-      // Responder a Meta de inmediato (< 3 segundos) para evitar reintentos
+      // Responder a Meta inmediatamente (< 3s) para evitar timeouts y reintentos
       res.status(200).send('EVENT_RECEIVED');
 
       console.log('📩 Petición POST recibida en /webhook:', JSON.stringify(body, null, 2));
@@ -58,7 +62,7 @@ app.post('/webhook', async (req, res) => {
       if (message.type === 'text') {
         const textoMensaje = message.text.body;
 
-        // 🧠 EVALUAR INTENCIÓN (Asegúrate de usar await si la función es async)
+        // 🧠 EVALUAR INTENCIÓN CON EL SERVICIO
         const { intent, responseText } = await evaluateIntent(textoMensaje);
         console.log(`💬 Mensaje recibido: "${textoMensaje}" | Intención detectada: [${intent}]`);
         console.log(`🤖 Respuesta preparada:\n${responseText}`);
@@ -97,16 +101,18 @@ app.post('/webhook', async (req, res) => {
         }
       }
     } else {
-      res.sendStatus(404);
+      // Si la ruta existe pero el payload no es el formato de Meta
+      console.log('⚠️ Se recibió un POST sin la estructura "object" de Meta:', body);
+      res.status(400).send('Formato no válido: se requiere el objeto de Meta/WhatsApp.');
     }
   } catch (err) {
     console.error('❌ Error procesando el webhook:', err.message);
-    // Garantizar que la petición no se quede colgada si el error ocurrió antes de responder a Meta
     if (!res.headersSent) {
       res.sendStatus(500);
     }
   }
 });
+
 // 4. Inicialización del servidor HTTP
 const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => {
