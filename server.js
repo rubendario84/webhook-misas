@@ -1,5 +1,6 @@
 const express = require('express');
 const { createClient } = require('@supabase/supabase-js');
+const { evaluateIntent } = require('./services/intentService.js');
 
 const app = express();
 app.use(express.json());
@@ -18,7 +19,6 @@ app.get('/webhook', (req, res) => {
 
   const VERIFY_TOKEN = process.env.VERIFY_TOKEN || 'parroquia_secret_token_2026';
 
-  // Si Meta está verificando el webhook
   if (mode && token) {
     if (mode === 'subscribe' && token === VERIFY_TOKEN) {
       console.log('✅ Webhook verificado correctamente con el token.');
@@ -32,7 +32,6 @@ app.get('/webhook', (req, res) => {
     return res.status(200).send(challenge);
   }
 
-  // Respuesta amable para cuando abres la URL desde el navegador (evita el 403)
   res.status(200).send('🚀 Servidor del Webhook de Misas activo y listo.');
 });
 
@@ -41,9 +40,7 @@ app.post('/webhook', async (req, res) => {
   try {
     const body = req.body;
 
-    // Verificar si la petición viene de WhatsApp Business
     if (body.object) {
-      // ⚠️ Responder 200 OK DE INMEDIATO a Meta para evitar bloquéos o Forbidden por Timeout
       res.status(200).send('EVENT_RECEIVED');
 
       console.log('📩 Petición POST recibida en /webhook:', JSON.stringify(body, null, 2));
@@ -55,10 +52,13 @@ app.post('/webhook', async (req, res) => {
 
       if (!message) return;
 
-      // Procesar únicamente mensajes de texto
       if (message.type === 'text') {
         const textoMensaje = message.text.body;
-        console.log(`💬 Mensaje de WhatsApp recibido: "${textoMensaje}"`);
+        
+        // 🧠 EVALUAR INTENCIÓN CON EL SERVICIO CREADO
+        const { intent, responseText } = evaluateIntent(textoMensaje);
+        console.log(`💬 Mensaje recibido: "${textoMensaje}" | Intención detectada: [${intent}]`);
+        console.log(`🤖 Respuesta preparada:\n${responseText}`);
 
         // Buscar la misa con estado ACTIVA
         const { data: misas, error: errorMisa } = await supabase
@@ -75,14 +75,14 @@ app.post('/webhook', async (req, res) => {
 
         const idMisaActiva = misas[0].id_misa;
 
-        // Insertar la intención recibida en Supabase
+        // Insertar en Supabase incluyendo el detalle y la intención evaluada
         const { error: errorInsert } = await supabase
           .from('intenciones')
           .insert([
             {
               id_misa: idMisaActiva,
-              id_tipo_intencion: 7, // Categoría por defecto
-              detalle_intencion: textoMensaje,
+              id_tipo_intencion: 7, 
+              detalle_intencion: `[${intent}] ${textoMensaje}`,
               origen: 'WHATSAPP_FELIGRES'
             }
           ]);
@@ -90,7 +90,7 @@ app.post('/webhook', async (req, res) => {
         if (errorInsert) {
           console.error('❌ Error al guardar la intención en Supabase:', errorInsert.message);
         } else {
-          console.log(`✨ ¡Intención guardada exitosamente en la Misa #${idMisaActiva}!`);
+          console.log(`✨ ¡Intención (${intent}) guardada exitosamente en Misa #${idMisaActiva}!`);
         }
       }
     } else {
