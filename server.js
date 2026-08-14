@@ -40,7 +40,9 @@ app.post('/webhook', async (req, res) => {
   try {
     const body = req.body;
 
+    // 1. Validar que la estructura sea de un objeto de WhatsApp
     if (body.object) {
+      // Responder a Meta de inmediato (< 3 segundos) para evitar reintentos
       res.status(200).send('EVENT_RECEIVED');
 
       console.log('📩 Petición POST recibida en /webhook:', JSON.stringify(body, null, 2));
@@ -50,13 +52,14 @@ app.post('/webhook', async (req, res) => {
       const value = changes?.value;
       const message = value?.messages?.[0];
 
+      // Si no es un mensaje (ej. es una notificación de estado "read" o "delivered"), salir silenciosamente
       if (!message) return;
 
       if (message.type === 'text') {
         const textoMensaje = message.text.body;
-        
-        // 🧠 EVALUAR INTENCIÓN CON EL SERVICIO CREADO
-        const { intent, responseText } = evaluateIntent(textoMensaje);
+
+        // 🧠 EVALUAR INTENCIÓN (Asegúrate de usar await si la función es async)
+        const { intent, responseText } = await evaluateIntent(textoMensaje);
         console.log(`💬 Mensaje recibido: "${textoMensaje}" | Intención detectada: [${intent}]`);
         console.log(`🤖 Respuesta preparada:\n${responseText}`);
 
@@ -98,9 +101,12 @@ app.post('/webhook', async (req, res) => {
     }
   } catch (err) {
     console.error('❌ Error procesando el webhook:', err.message);
+    // Garantizar que la petición no se quede colgada si el error ocurrió antes de responder a Meta
+    if (!res.headersSent) {
+      res.sendStatus(500);
+    }
   }
 });
-
 // 4. Inicialización del servidor HTTP
 const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => {
