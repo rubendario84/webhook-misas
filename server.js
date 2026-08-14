@@ -1,12 +1,20 @@
 const express = require('express');
-const cors = require('cors'); // Requerido para permitir peticiones desde clientes HTTP web como Hoppscotch/Postman
 const { createClient } = require('@supabase/supabase-js');
 const { evaluateIntent } = require('./services/intentService.js');
 
 const app = express();
 
-// Middleware
-app.use(cors()); // Habilita CORS para peticiones desde navegadores/plataformas externas
+// Middleware nativo para habilitar CORS sin dependencias externas
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  if (req.method === 'OPTIONS') {
+    return res.sendStatus(200);
+  }
+  next();
+});
+
 app.use(express.json());
 
 // 1. Configuración de Supabase
