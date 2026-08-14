@@ -23,7 +23,52 @@ const SUPABASE_SERVICE_ROLE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3Mi
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
-// 2. Endpoint de verificación de Webhook para Meta (GET)
+// 2. Función helper para responder al usuario vía WhatsApp Cloud API
+async function sendWhatsAppMessage(to, textBody) {
+  const WHATSAPP_TOKEN = process.env.WHATSAPP_TOKEN;
+  const PHONE_NUMBER_ID = process.env.PHONE_NUMBER_ID;
+
+  if (!WHATSAPP_TOKEN || !PHONE_NUMBER_ID) {
+    console.warn('⚠️ No se han configurado WHATSAPP_TOKEN o PHONE_NUMBER_ID en las variables de entorno.');
+    return;
+  }
+
+  const url = `https://graph.facebook.com/v19.0/${PHONE_NUMBER_ID}/messages`;
+
+  const payload = {
+    messaging_product: 'whatsapp',
+    recipient_type: 'individual',
+    to: to,
+    type: 'text',
+    text: {
+      preview_url: false,
+      body: textBody
+    }
+  };
+
+  try {
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${WHATSAPP_TOKEN}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(payload)
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      console.error('❌ Error al enviar mensaje por WhatsApp:', data);
+    } else {
+      console.log(`📤 Respuesta enviada exitosamente a ${to}. ID del mensaje:`, data.messages?.[0]?.id);
+    }
+  } catch (error) {
+    console.error('❌ Error en la petición a WhatsApp Cloud API:', error.message);
+  }
+}
+
+// 3. Endpoint de verificación de Webhook para Meta (GET)
 app.get('/webhook', (req, res) => {
   const mode = req.query['hub.mode'];
   const token = req.query['hub.verify_token'];
@@ -47,14 +92,14 @@ app.get('/webhook', (req, res) => {
   res.status(200).send('🚀 Servidor del Webhook de Misas activo y listo.');
 });
 
-// 3. Endpoint que recibe los mensajes de WhatsApp (POST)
+// 4. Endpoint que recibe los mensajes de WhatsApp (POST)
 app.post('/webhook', async (req, res) => {
   try {
     const body = req.body;
 
-    // Validar que la estructura sea de un objeto de Meta/WhatsApp
+    // Validar que la estructura sea un evento de Meta/WhatsApp
     if (body.object) {
-      // Responder a Meta inmediatamente (< 3s) para evitar timeouts y reintentos
+      // Responder a Meta de inmediato (< 3s) para evitar timeouts y reintentos
       res.status(200).send('EVENT_RECEIVED');
 
       console.log('📩 Petición POST recibida en /webhook:', JSON.stringify(body, null, 2));
@@ -64,18 +109,22 @@ app.post('/webhook', async (req, res) => {
       const value = changes?.value;
       const message = value?.messages?.[0];
 
-      // Si no es un mensaje (ej. es una notificación de estado "read" o "delivered"), salir silenciosamente
+      // Si no es un mensaje (ej. notificación de estado "read" o "delivered"), salir silenciosamente
       if (!message) return;
 
       if (message.type === 'text') {
         const textoMensaje = message.text.body;
+        const numeroRemitente = message.from; // Número de WhatsApp del feligrés
 
-        // 🧠 EVALUAR INTENCIÓN CON EL SERVICIO
+        // 🧠 EVALUAR INTENCIÓN
         const { intent, responseText } = await evaluateIntent(textoMensaje);
-        console.log(`💬 Mensaje recibido: "${textoMensaje}" | Intención detectada: [${intent}]`);
+        console.log(`💬 Mensaje recibido de ${numeroRemitente}: "${textoMensaje}" | Intención: [${intent}]`);
         console.log(`🤖 Respuesta preparada:\n${responseText}`);
 
-        // Buscar la misa con estado ACTIVA
+        // 📤 1. Responder automáticamente al feligrés por WhatsApp
+        await sendWhatsAppMessage(numeroRemitente, responseText);
+
+        // 🗄️ 2. Buscar la misa activa en Supabase
         const { data: misas, error: errorMisa } = await supabase
           .from('misas_instancia')
           .select('id_misa')
@@ -90,7 +139,7 @@ app.post('/webhook', async (req, res) => {
 
         const idMisaActiva = misas[0].id_misa;
 
-        // Insertar en Supabase incluyendo el detalle y la intención evaluada
+        // 📝 3. Registrar la intención en Supabase
         const { error: errorInsert } = await supabase
           .from('intenciones')
           .insert([
@@ -109,7 +158,6 @@ app.post('/webhook', async (req, res) => {
         }
       }
     } else {
-      // Si la ruta existe pero el payload no es el formato de Meta
       console.log('⚠️ Se recibió un POST sin la estructura "object" de Meta:', body);
       res.status(400).send('Formato no válido: se requiere el objeto de Meta/WhatsApp.');
     }
@@ -121,7 +169,7 @@ app.post('/webhook', async (req, res) => {
   }
 });
 
-// 4. Inicialización del servidor HTTP
+// 5. Inicialización del servidor HTTP
 const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => {
   console.log(`🚀 Webhook escuchando en el puerto ${PORT}`);
