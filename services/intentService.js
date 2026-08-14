@@ -17,9 +17,35 @@ export function evaluateIntent(text = '') {
     };
   }
 
+// Ejemplo dentro de intentService.js
+   const textoLimpio = texto.trim();
+
+  // Patrón para detectar solicitudes de difuntos
+  // Coincide con: "misa por difunto...", "intención por el difunto...", "misa de difunto..."
+  const regexDifunto = /(?:misa|intención|intencion)\s+(?:por|para)?\s*(?:el\s+)?(?:difunto|fallecido|fallecida)?\s*(.+)/i;
+  const match = textoLimpio.match(regexDifunto);
+
+  if (match) {
+    // match[1] captura todo lo que viene después de la frase clave (el nombre)
+    const nombreExtraido = match[1].trim(); 
+
+    return {
+      intent: 'INTENCION_DIFUNTO',
+      nombrePersona: nombreExtraido,
+      responseText: `⛪ *Intención de Misa Registrada*\n\nHemos anotado la intención por el descanso eterno de *${nombreExtraido}*.\n\nSera programado para la próxima misa disponible.`
+    };
+  
+  
   // Saludo / Menú por defecto
   return { 
     intent: 'GREETING', 
     responseText: '¡Hola! 👋 Bienvenido.\n\n1. Ver horarios de misas ⛪\n2. Ubicación 📍\n\nResponde con el número de tu opción.' 
   };
+
+
+ 
+
+  
+}
+  
 }
