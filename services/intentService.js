@@ -7,11 +7,11 @@ export function evaluateIntent(text = '') {
   const regexDifunto = /(?:misa|intención|intencion)\s+(?:por|para)?\s*(?:el\s+)?(?:difunto|fallecido|fallecida)?\s*(.+)/i;
   const match = rawText.match(regexDifunto);
 
-  if (match && match[1]) {
+if (match && match[1]) {
     const nombreExtraido = match[1].trim();
-
     return {
       intent: 'INTENCION_DIFUNTO',
+      idTipoIntencion: 1, // 👈 ID correspondiente a Difuntos en tu base de datos
       nombrePersona: nombreExtraido,
       responseText: `⛪ *Intención de Misa Registrada*\n\nHemos anotado la intención por el descanso eterno de *${nombreExtraido}*.\n\nSera programado para la próxima misa disponible.`
     };
